@@ -1,0 +1,29 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "./Core/Inc",
+                "./Drivers/CMSIS/Core/Include", 
+                "./Drivers/STM32F4xx_HAL_Driver/Inc",
+                "./Drivers/CMSIS/RTOS2/Include",
+                "./Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2",
+                "./Drivers/CMSIS/Device/ST/STM32F4xx/Include",
+                "./Middlewares/Third_Party/FreeRTOS/Source/include",
+                "./Drivers/STM32F4xx_HAL_Driver/Inc/Legacy",
+                "./Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F",
+                "./Drivers/CMSIS/Include"
+            ],
+            "defines": [
+                "USE_HAL_DRIVER",
+                "STM32F405xx",
+                "USE_FULL_LL_DRIVER"
+            ],
+            "compilerPath": "D:\\My\\MSYS2\\mingw64\\bin\\gcc.exe",
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "windows-gcc-x64"
+        }
+    ],
+    "version": 4
+}

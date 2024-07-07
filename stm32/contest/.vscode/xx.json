@@ -1,0 +1,15 @@
+{
+    "position":{
+        "latitude":0,
+        "longitude":0,
+        "altitude":0
+    },
+    "signal":{
+        "rssi":0,
+        "sinr":0,
+        "rsrp":0,
+        "rsrq":0
+    },
+    "carrier":"China Mobile",
+    "SN":0
+}
