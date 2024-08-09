@@ -28,6 +28,9 @@
  */
 
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include "ohos_init.h"
 #include "cmsis_os2.h"
 #include "httpd.h"
@@ -40,6 +43,7 @@
 #include "cJSON.h"  
 #include "dtof.h"
 #include "stm32.h" 
+#include "webpage.h"
 
 static int g_netId = -1;
 #define STACK_SIZE  (4096)
@@ -50,11 +54,13 @@ static int g_netId = -1;
 static const char *g_api_key = "NeY5Hx1biFkfoDn9BNhIMpzl50iLrmgn";
 static char recv_buf[HTTPC_DEMO_RECV_BUFSIZE];
 static char json_buf[2048];
-static char instru[1024];
 static char stm32buf[1024];
 
+char webinstru[256];
+static const char *host_name = "api.map.baidu.com";  // 百度地图API服务器的主机名
+
 // 函数声明
-unsigned int http_client_get(const char *origin, const char *destination, const char *server_ip);
+int http_client_get(const char *origin, const char *destination, const char *server_ip);
 struct hostent *lwip_gethostbyname(const char *name);
 
 void parse_https_recv(char* https_recv, int len){
@@ -100,51 +106,49 @@ void parse_https_recv(char* https_recv, int len){
                     cJSON *dist = cJSON_GetObjectItem(step, "distance");
                     cJSON *dir = cJSON_GetObjectItem(step, "direction");
                     cJSON* dura = cJSON_GetObjectItem(step, "duration");
+                    cJSON* instrution = cJSON_GetObjectItem(step, "instruction");
+                    char* ins = cJSON_GetStringValue(instrution);
                     printf("dist: %d , dir:%d, dura:%d\n", dist->valueint, dir->valueint, dura->valueint);
-                    int len = snprintf(stm32buf, 1024, "%d,%d,%d", dist->valueint, dir->valueint, dura->valueint);
+                    int len = snprintf(stm32buf, 1024, "%d:%d:%d:%s", dist->valueint, dir->valueint, dura->valueint, ins);
+                    memset(webinstru, 0, sizeof(webinstru));
+                    memcpy(webinstru, ins, strlen(ins));
                     sendtostm32(stm32buf, len);
                 }
             }
         }
     }
-    printf("complete to parse result\n");
     cJSON_Delete(root); // 清理cJSON对象
 }
 
 void HttpClientTask(void *arg) {
     (void)arg;
 
-    char origin[64] = "30.5454,114.4234";
-    char destination[64] = "30.5186,114.4234";
-    const char *host_name = "api.map.baidu.com";  // 百度地图API服务器的主机名
-
     // 解析主机名获取IP地址
     struct hostent *host_entry = lwip_gethostbyname(host_name);
     while (host_entry == NULL) {
         printf("Failed to resolve hostname: %s\n", host_name);
-        sleep(5);
+        sleep(1);
         host_entry = lwip_gethostbyname(host_name);
     }
 
     // 获取解析到的第一个IP地址
-    char* start_pos = get_start_pos();
     char *server_ip = inet_ntoa(*((struct in_addr *)host_entry->h_addr_list[0]));
     printf("Resolved IP address: %s\n", server_ip);
+    char* startpos, *endpos;
     while(1){
-        if(start_pos == NULL)
-            http_client_get(origin, destination, server_ip);
-        else
-            http_client_get(start_pos, destination, server_ip);
-        sleep(5);
+        startpos = get_start_pos();
+        endpos = get_target_pos();
+        int ret = http_client_get(startpos, endpos, server_ip);
+        sleep(3);
     }
 }
 
-unsigned int http_client_get(const char *origin, const char *destination, const char *server_ip) {
+int http_client_get(const char *ori, const char *dest, const char *server_ip) {
     char g_request[512];
     snprintf(g_request, sizeof(g_request), "GET /directionlite/v1/walking?origin=%s&destination=%s&ak=%s HTTP/1.1\r\n\
 Host: api.map.baidu.com\r\n\
 Connection: close\r\n\
-\r\n", origin, destination, g_api_key);
+\r\n", ori, dest, g_api_key);
 
     struct sockaddr_in addr = {0};
     int s, r;
@@ -155,7 +159,6 @@ Connection: close\r\n\
         printf("Failed to create socket\n");
         return 1;
     }
-    printf("Socket created\n");
 
     // 设置目标服务器地址
     addr.sin_family = AF_INET;
@@ -192,13 +195,28 @@ Connection: close\r\n\
     char* json_end = NULL;
         // do {
     memset(recv_buf, 0, sizeof(recv_buf));
-    r = lwip_read(s, recv_buf, sizeof(recv_buf) - 2);
-    printf("%d\n", r);
+    int tmp_r = lwip_read(s, recv_buf+r, sizeof(recv_buf) - 2);
+    r += tmp_r;
+    while(tmp_r > 10){
+        tmp_r = lwip_read(s, recv_buf+r, sizeof(recv_buf) - 2);
+        r += tmp_r;
+    }
+    printf("lwip read %d\n", r);
     json_start = strchr(recv_buf, '{');
     char* tmp = strchr(json_start+1, '}');
     for(int i = 0; i < 5; ++i){
         json_end = tmp;
         tmp = strchr(tmp+1, '}');
+        if(tmp == NULL){
+            printf("can not find valid json\r\n");
+            lwip_close(s);
+            return -1;
+        }
+    }
+    if(json_end-json_start > sizeof(json_buf)-10){
+        printf("json buffer overflow\n");
+        lwip_close(s);
+        return -1;
     }
     memcpy(json_buf, json_start, json_end-json_start);
     int len = json_end-json_start;
@@ -217,6 +235,12 @@ Connection: close\r\n\
 }
 
 void HttpClientEntry(void) {
+
+    dtof_gpio_init();
+    dtof_uart_config();
+    stm32_gpio_init();
+    stm_uart_config();
+
     WifiDeviceConfig config = {0};
     osThreadAttr_t attr = {0};
     //wifi名称为ABCD 密码为123456789
@@ -232,15 +256,13 @@ void HttpClientEntry(void) {
     hook.free_fn = free;
     hook.malloc_fn = malloc;
     cJSON_InitHooks(&hook);
-
-    stm32_gpio_init();
-    stm_uart_config();
-    // dtof_gpio_init();
-    // dtof_uart_config();
+    sleep(1);
     if (osThreadNew(HttpClientTask, NULL, &attr) == NULL) {
         printf("[HttpClientEntry] Failed to create HttpClientTask!\n");
     }
     stm32_task_entry();
+    dtof_init();
+    WifiHotspotDemo();
 }
 
 SYS_RUN(HttpClientEntry);

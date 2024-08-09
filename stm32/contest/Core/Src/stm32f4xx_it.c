@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include "audio.h"
 #include "hi3861.h"
+#include "syn6288.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,6 +49,7 @@
 extern nmea_t atgm;
 extern audio_t su03_audio;
 extern hi3861_t hi;
+extern syn_t syn;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -224,7 +226,7 @@ void UART4_IRQHandler(void)
 void USART6_IRQHandler(void)
 {
   /* USER CODE BEGIN USART6_IRQn 0 */
-
+  syn_callback(&syn);
   /* USER CODE END USART6_IRQn 0 */
   /* USER CODE BEGIN USART6_IRQn 1 */
 

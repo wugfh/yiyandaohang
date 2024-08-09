@@ -24,6 +24,7 @@
 #include "hi_pwm.h"
 #include "ohos_init.h"
 #include "stm32.h"
+#include "iot_errno.h"
 
 #define IOT_UART_IDX_1  (1)
 #define STACK_SIZE   (1024)
@@ -54,11 +55,19 @@ char alarm_msg[] = "barrier";
  */
 int dtof_uart_config(void)
 {
-    IotUartAttribute g_uart_cfg = {115200, 8, 1, IOT_UART_PARITY_NONE, 500, 500, 0};
+    IotUartAttribute g_uart_cfg = {
+        .baudRate = 115200, 
+        .dataBits = 8, 
+        .stopBits = 1, 
+        .parity = IOT_UART_PARITY_NONE, 
+        .rxBlock = IOT_UART_BLOCK_STATE_BLOCK, 
+        .txBlock = IOT_UART_BLOCK_STATE_BLOCK, 
+        .pad = 0
+    };
     int ret = IoTUartInit(IOT_UART_IDX_1, &g_uart_cfg);
-    while (ret != 0) 
+    while (ret != IOT_SUCCESS) 
     {
-        printf("uart init fail\r\n");
+        printf("dtof uart init fail\r\n");
         sleep(2);
         ret = IoTUartInit(IOT_UART_IDX_1, &g_uart_cfg);
     }
@@ -119,9 +128,7 @@ void dtof_gpio_init(void)
  */
 static void* DTOF_Task(void)
 {
-    static int r = 0; //统计距离小于0.2米的点云数量，满足条件亮红灯
-    static int g = 0; //统计距离在0.4米到1米之间的点云数量，满足条件亮绿灯
-    static int y = 0; //统计距离在0.2米到0.4米之间的点云数量，满足条件亮黄灯
+    static int r = 0; //统计距离小于2米的点云数量，满足条件亮红灯
     static int d = 0; 
     unsigned short int *data = NULL;
     short int i = 0;
@@ -130,7 +137,7 @@ static void* DTOF_Task(void)
     unsigned int crc_data = 0; //接收CRC校验后的值
 
     init_crc_table();
-
+    int cnt = 0;
     while (1) 
     {
         len += IoTUartRead(IOT_UART_IDX_1, uartReadBuff+len, DTOF_DATA_LEN);
@@ -146,75 +153,13 @@ static void* DTOF_Task(void)
                     for(i = 0; i < 64; i++) 
                     {
                         data = (unsigned short int *)(&uartReadBuff[i*2+4]);
-                        if((*data) < 200)
+                        if((*data) < 1000 && (*data) > 10)
                         {
                             r += 1;
-                        }
-                        else if ((*data) >= 200 && (*data) < 400)
-                        {
-                            y += 1;
-                        }
-                        else if((*data) >= 400 && (*data)  < 1000)
-                        {
-                            g += 1;
                         }
 
                     }
                     d = d + 1;
-                    if (r == 64)
-                    { 
-                        IoTGpioSetOutputVal(IOT_GPIO_10, IOT_GPIO_VALUE1);
-                        IoTGpioSetOutputVal(IOT_GPIO_11, IOT_GPIO_VALUE0);
-                        IoTGpioSetOutputVal(IOT_GPIO_12, IOT_GPIO_VALUE0);
-
-                        if((*data) >= 100 && (*data) < 150)
-                        {
-                            IoTPwmStart(IOT_PWM_PORT_PWM0, 99, PWM_FREQ_4K);
-                            d = 0;
-                        }
-                        else if((*data) >= 150 && (*data) < 200 && d >= 3)
-                        {
-                            IoTPwmStart(IOT_PWM_PORT_PWM0, PWM_DUTY_50, PWM_FREQ_4K);
-                            d = 0;
-                        }
-                    }
-                    else if(y >= 32)
-                    {
-                        IoTGpioSetOutputVal(IOT_GPIO_10, IOT_GPIO_VALUE0);
-                        IoTGpioSetOutputVal(IOT_GPIO_11, IOT_GPIO_VALUE0);
-                        IoTGpioSetOutputVal(IOT_GPIO_12, IOT_GPIO_VALUE1);
-
-                        if((*data) >= 200 && (*data) < 300 && d >= 6)
-                        {
-                            IoTPwmStart(IOT_PWM_PORT_PWM0, PWM_DUTY_50, PWM_FREQ_4K);
-                            d = 0;
-                        }
-                        else if((*data) >= 300 && (*data) < 400 && d >= 9)
-                        {
-                            IoTPwmStart(IOT_PWM_PORT_PWM0, PWM_DUTY_50, PWM_FREQ_4K);
-                            d = 0;
-                        }
-                        else if((*data) >= 400 && (*data) < 500 && d >= 12)
-                        {
-                            IoTPwmStart(IOT_PWM_PORT_PWM0, PWM_DUTY_50, PWM_FREQ_4K);
-                            d = 0;
-                        }
-                    }
-                    else if (g >= 16)
-                    {
-                        IoTGpioSetOutputVal(IOT_GPIO_10, IOT_GPIO_VALUE0);
-                        IoTGpioSetOutputVal(IOT_GPIO_11, IOT_GPIO_VALUE1);
-                        IoTGpioSetOutputVal(IOT_GPIO_12, IOT_GPIO_VALUE0);
-                        IoTPwmStop(IOT_PWM_PORT_PWM0);
-                    }
-                    else
-                    {
-                        IoTGpioSetOutputVal(IOT_GPIO_10, IOT_GPIO_VALUE0);
-                        IoTGpioSetOutputVal(IOT_GPIO_11, IOT_GPIO_VALUE0);
-                        IoTGpioSetOutputVal(IOT_GPIO_12, IOT_GPIO_VALUE0);
-
-                        IoTPwmStop(IOT_PWM_PORT_PWM0);
-                    }
                 }
                 else
                 {
@@ -223,31 +168,22 @@ static void* DTOF_Task(void)
             }
             len = 0;
             crc_data = 0;
-            if(r > 32){
-                sendtostm32(alarm_msg, sizeof(alarm_msg));
+            if(r > 56){
+                ++cnt;
             }
-            printf("Uart read data:r = %d,y = %d,g = %d\r\n", r,y,g);
-            r = y = g = 0;
+            else{
+                cnt = 0;
+            }
+            if(cnt > 5){
+                sendtostm32(alarm_msg, sizeof(alarm_msg));
+                cnt = 0;
+            }
+            r=0;
             data = NULL;
             memset(uartReadBuff,0,sizeof(uartReadBuff));
             memset(crcBuff,0,sizeof(crcBuff));
         }
-        sleep(5);
-        if(len == 0)
-        {
-            crc_data = 0;
-            printf("Uart read data:r = %d,y = %d,g = %d\r\n", r,y,g);
-            r = y = g = 0;
-            data = NULL;
-            memset(uartReadBuff,0,sizeof(uartReadBuff));
-            memset(crcBuff,0,sizeof(crcBuff));
-
-            IoTGpioSetOutputVal(IOT_GPIO_10, IOT_GPIO_VALUE0);
-            IoTGpioSetOutputVal(IOT_GPIO_11, IOT_GPIO_VALUE0);
-            IoTGpioSetOutputVal(IOT_GPIO_12, IOT_GPIO_VALUE0);
-
-            IoTPwmStop(IOT_PWM_PORT_PWM0);
-        }
+        usleep(50000);
     }
 
     return NULL;

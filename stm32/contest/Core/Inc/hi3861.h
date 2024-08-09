@@ -24,6 +24,8 @@ typedef struct hi3861{
 
 void hi3861_callback(hi3861_t* hi);
 void hi3861_init(hi3861_t* hi, USART_TypeDef* usart, int qmsg_len);
+int hi3861_send_start_pos(hi3861_t* hi, double latitude, double longitude, double altitude);
+int hi3861_send_target_pos(hi3861_t* hi, double latitude, double longitude, double altitude);
 int hi3861_send_pos(hi3861_t* hi, double latitude, double longitude, double altitude);
 
 #endif

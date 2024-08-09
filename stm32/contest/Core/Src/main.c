@@ -24,9 +24,11 @@
 /* USER CODE BEGIN Includes */
 #include "atgm.h"
 #include <stdio.h>
-#include "log.h"
+#include "util.h"
 #include "audio.h"
 #include "hi3861.h"
+#include "syn6288.h"
+#include "qmc5883.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,18 +49,16 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
 /* USER CODE BEGIN PV */
 extern nmea_t atgm;
 osThreadId_t maintask;
 audio_t su03_audio;
 hi3861_t hi;
-float latitude = 30.5454, longitute = 114.4234, altitude = 0;
+syn_t syn;
+qmc_t qmc;
+float latitude = 32.061446, longitute = 118.667597, altitude = 0;
+char syn_test[] = "从起点向西北方向出发";
+char ucs2_test[100];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -69,6 +69,7 @@ static void MX_UART4_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_USART3_UART_Init(void);
+static void MX_USART6_UART_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
@@ -79,9 +80,14 @@ void StartDefaultTask(void *argument);
 /* USER CODE BEGIN 0 */
 static void main_task_entry(void* args){
   nmea_available_reset(&atgm);
-  osDelay(1/portTICK_PERIOD_MS);
+  syn6288_send(&syn, syn_test, sizeof(syn_test));
   while(1){
+    // qmc_get_angle(&qmc);
+    // printf("%d,%d,%d\r\n", qmc.x, qmc.y, qmc.z);
+    // qmc_get_temperature(&qmc);
+    // printf("temperature:%d\r\n", qmc.temp);
     bool ok = nmea_available(&atgm);
+    printf("syn stat:%x\r\n", syn.state);
     if(ok){
       printf("atgm is ready\n\r");
       log_nmea_buf(&atgm);
@@ -92,10 +98,14 @@ static void main_task_entry(void* args){
       osDelay(1000/portTICK_PERIOD_MS);
       continue;
     }
-		// printf("lal:%f,lon:%f\r\n", latitude, longitute);
-    nmea_gnss_latitude_deg(&atgm, &latitude);
-    nmea_gnss_longitude_deg(&atgm, &longitute);
-    nmea_gnss_altitude_m(&atgm, &altitude);
+    float lal, lng;
+		printf("lal:%.7f,lon:%.7f\r\n", latitude, longitute);
+    nmea_gnss_latitude_deg(&atgm, &lal);
+    nmea_gnss_longitude_deg(&atgm, &lng);
+    if(lal>10 && lal<90 && lng>10 && lng<180){
+      latitude = lal;
+      longitute = lng;
+    }
     hi3861_send_pos(&hi, latitude, longitute, altitude);
     nmea_available_reset(&atgm);
     osDelay(1000/portTICK_PERIOD_MS);
@@ -146,10 +156,11 @@ int main(void)
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
+  MX_USART6_UART_Init();
   /* USER CODE BEGIN 2 */
   const osThreadAttr_t maintask_attr = {
     .name = "maintask",
-    .stack_size = 128 * 4,
+    .stack_size = 4096,
     .priority = (osPriority_t) osPriorityNormal,
   };
   /* USER CODE END 2 */
@@ -175,13 +186,15 @@ int main(void)
 
   /* Create the thread(s) */
   /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+
 
   /* USER CODE BEGIN RTOS_THREADS */
+  maintask = osThreadNew(main_task_entry, NULL, &maintask_attr);
   atgm_init(USART3);
   audio_init(&su03_audio, UART4);
   hi3861_init(&hi, USART2, 5);
-  maintask = osThreadNew(main_task_entry, NULL, &maintask_attr);
+  syn_init(&syn, USART6, 5);
+  qmc_init(I2C1, &qmc);
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
@@ -274,7 +287,7 @@ static void MX_I2C1_Init(void)
   PB6   ------> I2C1_SCL
   PB7   ------> I2C1_SDA
   */
-  GPIO_InitStruct.Pin = MPU6050_SCL_Pin|MPU6050_SDA_Pin;
+  GPIO_InitStruct.Pin = COMPASS_SCL_Pin|COMPASS_SDA_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
@@ -520,6 +533,61 @@ static void MX_USART3_UART_Init(void)
   LL_USART_Enable(USART3);
   /* USER CODE BEGIN USART3_Init 2 */
   /* USER CODE END USART3_Init 2 */
+
+}
+
+/**
+  * @brief USART6 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART6_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART6_Init 0 */
+
+  /* USER CODE END USART6_Init 0 */
+
+  LL_USART_InitTypeDef USART_InitStruct = {0};
+
+  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+  /* Peripheral clock enable */
+  LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_USART6);
+
+  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOC);
+  /**USART6 GPIO Configuration
+  PC6   ------> USART6_TX
+  PC7   ------> USART6_RX
+  */
+  GPIO_InitStruct.Pin = SYNPORT_TX_Pin|SYNPORT_RX_Pin;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_8;
+  LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /* USART6 interrupt Init */
+  NVIC_SetPriority(USART6_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),5, 0));
+  NVIC_EnableIRQ(USART6_IRQn);
+
+  /* USER CODE BEGIN USART6_Init 1 */
+
+  /* USER CODE END USART6_Init 1 */
+  USART_InitStruct.BaudRate = 9600;
+  USART_InitStruct.DataWidth = LL_USART_DATAWIDTH_8B;
+  USART_InitStruct.StopBits = LL_USART_STOPBITS_1;
+  USART_InitStruct.Parity = LL_USART_PARITY_NONE;
+  USART_InitStruct.TransferDirection = LL_USART_DIRECTION_TX_RX;
+  USART_InitStruct.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
+  USART_InitStruct.OverSampling = LL_USART_OVERSAMPLING_16;
+  LL_USART_Init(USART6, &USART_InitStruct);
+  LL_USART_ConfigAsyncMode(USART6);
+  LL_USART_Enable(USART6);
+  /* USER CODE BEGIN USART6_Init 2 */
+
+  /* USER CODE END USART6_Init 2 */
 
 }
 

@@ -44,11 +44,6 @@ contest\log.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_dma.h
 contest\log.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usart.h
 contest\log.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_gpio.h
 contest\log.o: ../Core/Inc/nmea_config.h
-contest\log.o: D:\hardware\keil\ARM\ARMCC\Bin\..\include\stdbool.h
-contest\log.o: D:\hardware\keil\ARM\ARMCC\Bin\..\include\string.h
-contest\log.o: D:\hardware\keil\ARM\ARMCC\Bin\..\include\stdio.h
-contest\log.o: D:\hardware\keil\ARM\ARMCC\Bin\..\include\stdlib.h
-contest\log.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os.h
 contest\log.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h
 contest\log.o: ../Core/Inc/FreeRTOSConfig.h
 contest\log.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h
@@ -56,6 +51,12 @@ contest\log.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/portable.h
 contest\log.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h
 contest\log.o: ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F/portmacro.h
 contest\log.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h
+contest\log.o: D:\hardware\keil\ARM\ARMCC\Bin\..\include\stdbool.h
+contest\log.o: D:\hardware\keil\ARM\ARMCC\Bin\..\include\string.h
+contest\log.o: D:\hardware\keil\ARM\ARMCC\Bin\..\include\stdio.h
+contest\log.o: D:\hardware\keil\ARM\ARMCC\Bin\..\include\stdlib.h
+contest\log.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 contest\log.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h
 contest\log.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h
+contest\log.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os.h
 contest\log.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.h

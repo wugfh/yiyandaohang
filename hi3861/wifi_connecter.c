@@ -42,6 +42,8 @@
 #define DELAY_TICKS_10     (10)
 #define DELAY_TICKS_100    (100)
 
+char myip[20];
+
 static void PrintLinkedInfo(WifiLinkedInfo* info)
 {
     if (!info) return;
@@ -122,7 +124,7 @@ int ConnectToHotspot(WifiDeviceConfig* apConfig)
         printf("netifapi_dhcp_start: %d\r\n", ret);
 
         osDelay(DELAY_TICKS_100); // wait DHCP server give me IP
-#if 1
+#if 0
         ret = netifapi_netif_common(g_iface, dhcp_clients_info_show, NULL);
         printf("netifapi_netif_common: %d\r\n", ret);
 #else
@@ -132,7 +134,8 @@ int ConnectToHotspot(WifiDeviceConfig* apConfig)
         ip4_addr_t gw = {0};
         ret = netifapi_netif_get_addr(g_iface, &ip, &netmask, &gw);
         if (ret == ERR_OK) {
-            printf("ip = %s\r\n", ip4addr_ntoa(&ip));
+            snprintf(myip, 20, "%s", ip4addr_ntoa(&ip));
+            printf("ip = %s\r\n", myip);
             printf("netmask = %s\r\n", ip4addr_ntoa(&netmask));
             printf("gw = %s\r\n", ip4addr_ntoa(&gw));
         }

@@ -1,6 +1,6 @@
 #pragma once
 
 void dtof_init(void);
-void dtof_gpio_init();
+void dtof_gpio_init(void);
 
-int dtof_uart_config();
+int dtof_uart_config(void);

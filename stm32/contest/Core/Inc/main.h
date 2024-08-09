@@ -77,6 +77,10 @@ void Error_Handler(void);
 #define ATGM_TX_GPIO_Port GPIOB
 #define ATGM_RX_Pin LL_GPIO_PIN_11
 #define ATGM_RX_GPIO_Port GPIOB
+#define SYNPORT_TX_Pin LL_GPIO_PIN_6
+#define SYNPORT_TX_GPIO_Port GPIOC
+#define SYNPORT_RX_Pin LL_GPIO_PIN_7
+#define SYNPORT_RX_GPIO_Port GPIOC
 #define COMPUTER_TX_Pin LL_GPIO_PIN_9
 #define COMPUTER_TX_GPIO_Port GPIOA
 #define COMPUTER_RX_Pin LL_GPIO_PIN_10
@@ -85,13 +89,13 @@ void Error_Handler(void);
 #define SU03_TX_GPIO_Port GPIOC
 #define SU03_RX_Pin LL_GPIO_PIN_11
 #define SU03_RX_GPIO_Port GPIOC
-#define MPU6050_SCL_Pin LL_GPIO_PIN_6
-#define MPU6050_SCL_GPIO_Port GPIOB
-#define MPU6050_SDA_Pin LL_GPIO_PIN_7
-#define MPU6050_SDA_GPIO_Port GPIOB
+#define COMPASS_SCL_Pin LL_GPIO_PIN_6
+#define COMPASS_SCL_GPIO_Port GPIOB
+#define COMPASS_SDA_Pin LL_GPIO_PIN_7
+#define COMPASS_SDA_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
-
+#define SYN6288_USART   USART6
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

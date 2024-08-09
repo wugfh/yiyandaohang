@@ -16,6 +16,9 @@
         "string_view": "c",
         "initializer_list": "c",
         "hi3861.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "module_4g.h": "c",
+        "stdlib.h": "c",
+        "syn6288.h": "c"
     }
 }

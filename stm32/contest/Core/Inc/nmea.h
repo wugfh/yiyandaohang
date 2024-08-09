@@ -20,17 +20,20 @@
 
 #include "main.h"
 #include "nmea_config.h"
+#include <FreeRTOS.h>
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <queue.h>
 #if _NMEA_USE_FREERTOS != 0
 #define nmea_delay(x) osDelay(x)
 #include "cmsis_os.h"
 #else
 #define nmea_delay(x) HAL_Delay(x)
 #endif
+
+#define NMEA_MSGLEN     1024
 
 typedef struct
 {
@@ -99,27 +102,32 @@ typedef struct
 
 } sounder_t;
 
+typedef struct{
+  char* buf;
+  uint32_t len;
+}nmea_msg;
+
 typedef struct
 {
   USART_TypeDef   *usart;
   uint32_t        buf_time;
-  char            *buf;
-  char            *debug_buf;
-  uint16_t        buf_index;
-  uint16_t        buf_size;
+  nmea_msg        msg;
+  nmea_msg        debug_msg;
   bool            lock;
   bool            available;
   gnss_t          gnss;
   compass_t       compass;
   sounder_t       sounder;
-
+  xQueueHandle    qrecv;
+  xQueueHandle    qaddr;
+  BaseType_t      woken;
 } nmea_t;
 
 //##################################################################################
 
 //								ALL
-bool  nmea_init(nmea_t *nmea, USART_TypeDef *usart, uint16_t buf_size);
-void  nmea_loop(nmea_t *nmea);
+bool  nmea_init(nmea_t *nmea, USART_TypeDef *usart, uint16_t qsize);
+void  nmea_loop(nmea_msg* msg, nmea_t* nmea);
 void  nmea_callback(nmea_t *nmea);
 bool  nmea_available(nmea_t *nmea);
 void  nmea_available_reset(nmea_t *nmea);

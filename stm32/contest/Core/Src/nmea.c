@@ -45,44 +45,54 @@ inline float nmea_convert(float raw_degrees)
 //###########################################################################################################################
 inline void nmea_callback(nmea_t *nmea)
 {
-	if (LL_USART_IsActiveFlag_RXNE(nmea->usart))
-	{
+	if (LL_USART_IsActiveFlag_RXNE(nmea->usart) && nmea->msg.buf != NULL){
 		uint8_t tmp = LL_USART_ReceiveData8(nmea->usart);
-		if(nmea->available)
-			return;
-		if (nmea->buf_index < nmea->buf_size - 1)
+		if (nmea->msg.len < NMEA_MSGLEN)
 		{
-		nmea->buf[nmea->buf_index++] = tmp;
-		nmea->buf_time = HAL_GetTick();
+			nmea->msg.buf[nmea->msg.len++] = tmp;
 		}
+		LL_USART_ClearFlag_RXNE(nmea->usart);
+	}
+	else if(LL_USART_IsActiveFlag_IDLE(nmea->usart)){
+		LL_USART_ClearFlag_IDLE(nmea->usart);
+        if(xQueueSendFromISR(nmea->qrecv, &nmea->msg, &nmea->woken) != pdTRUE){
+            printf("nmea send msg failed,size:%d\r\n", uxQueueMessagesWaitingFromISR(nmea->qrecv));
+			printf("%d\r\n", nmea->msg.len);
+        }
+        if(xQueueReceiveFromISR(nmea->qaddr, &nmea->msg.buf, &nmea->woken) != pdTRUE){
+            nmea->msg.buf = NULL;
+        }
+        nmea->msg.len = 0;
+        if(nmea->woken == pdTRUE) taskYIELD();
+        nmea->woken = pdFALSE;
 	}
 }
 //###########################################################################################################################
-bool nmea_init(nmea_t *nmea, USART_TypeDef *usart, uint16_t buf_size)
+bool nmea_init(nmea_t *nmea, USART_TypeDef *usart, uint16_t q_size)
 {
-	if (nmea->buf != NULL)
-		return false;
-	memset(nmea, 0, sizeof(nmea_t));
+	nmea->msg.buf = NULL;
+	nmea->msg.len = 0;
+	nmea->debug_msg.buf = pvPortMalloc(NMEA_MSGLEN);
+	nmea->debug_msg.len = 0;
 	nmea->usart = usart;
-#if _NMEA_USE_FREERTOS != 0
-	nmea->buf = (char*)pvPortMalloc(buf_size);
-	nmea->debug_buf = (char*)pvPortMalloc(buf_size);
-#else
-	nmea->buf = (char*) malloc(buf_size);
-#endif
-	if (nmea->buf == NULL)
-		return false;
-	nmea->buf_size = buf_size;
-	LL_USART_EnableIT_RXNE(USART3);
+	LL_USART_EnableIT_RXNE(usart);
+	LL_USART_EnableIT_IDLE(usart);
+	nmea->qrecv = xQueueCreate(q_size, sizeof(nmea->msg));
+	nmea->qaddr = xQueueCreate(q_size, sizeof(nmea->msg.buf));
+	nmea->woken = pdFALSE;
+	for(int i = 0; i < q_size; ++i){
+        char* addr = pvPortMalloc(NMEA_MSGLEN);
+        xQueueSend(nmea->qaddr, &addr, 0);
+    }
+	xQueueReceive(nmea->qaddr, &nmea->msg.buf, 0);
 	return true;
 }
 //###########################################################################################################################
-void nmea_loop(nmea_t *nmea)
-{
-	while (nmea->lock)
-		nmea_delay(1);
-	nmea->lock = true;
-	if ((nmea->buf_index > 0) && (HAL_GetTick()-nmea->buf_time>100))
+void nmea_loop(nmea_msg* msg, nmea_t* nmea)
+{	
+	memcpy(nmea->debug_msg.buf, msg->buf, msg->len);
+	nmea->debug_msg.len = msg->len;
+	if (msg->len > 0)
 	{
 		char line[128];
 		char *found = NULL;
@@ -94,7 +104,7 @@ void nmea_loop(nmea_t *nmea)
 		do
 		{
 			end = false;
-			found = strstr(nmea->buf, NMEA_GGA);
+			found = strstr(msg->buf, NMEA_GGA);
 			if (found != NULL)
 			{
 				found -= 3;
@@ -204,7 +214,7 @@ void nmea_loop(nmea_t *nmea)
 		do
 		{
 			end = false;
-			found = strstr(nmea->buf, NMEA_RMC);
+			found = strstr(msg->buf, NMEA_RMC);
 			if (found != NULL)
 			{
 				found -= 3;
@@ -316,7 +326,7 @@ void nmea_loop(nmea_t *nmea)
 		do
 		{
 			end = false;
-			found = strstr(nmea->buf, NMEA_HDT);
+			found = strstr(msg->buf, NMEA_HDT);
 			if (found != NULL)
 			{
 				found -= 3;
@@ -369,7 +379,7 @@ void nmea_loop(nmea_t *nmea)
 		do
 		{
 			end = false;
-			found = strstr(nmea->buf, NMEA_HDM);
+			found = strstr(msg->buf, NMEA_HDM);
 			if (found != NULL)
 			{
 				found -= 3;
@@ -422,7 +432,7 @@ void nmea_loop(nmea_t *nmea)
 		do
 		{
 			end = false;
-			found = strstr(nmea->buf, NMEA_DPT);
+			found = strstr(msg->buf, NMEA_DPT);
 			if (found != NULL)
 			{
 				found -= 3;
@@ -481,7 +491,7 @@ void nmea_loop(nmea_t *nmea)
 		do
 		{
 			end = false;
-			found = strstr(nmea->buf, NMEA_MTW);
+			found = strstr(msg->buf, NMEA_MTW);
 			if (found != NULL)
 			{
 				found -= 3;
@@ -539,11 +549,7 @@ void nmea_loop(nmea_t *nmea)
 		}
 		while (0);
 		//	---	decode $xxMTW
-	memcpy(nmea->debug_buf, nmea->buf, nmea->buf_index+1);
-    memset(nmea->buf, 0, nmea->buf_size);
-    nmea->buf_index = 0;
 	}
-	nmea->lock = false;
 }
 //###########################################################################################################################
 bool nmea_available(nmea_t *nmea)
@@ -559,8 +565,8 @@ void nmea_available_reset(nmea_t *nmea)
 	memset(&nmea->gnss.valid, 0, sizeof(gnss_valid_t));
 	memset(&nmea->compass.valid, 0, sizeof(compass_valid_t));
 	memset(&nmea->sounder.valid, 0, sizeof(sounder_valid_t));
-	memset(nmea->buf, 0, nmea->buf_size);
-	nmea->buf_index = 0;
+	memset(nmea->msg.buf, 0, NMEA_MSGLEN);
+	nmea->msg.len = 0;
 	nmea->available = false;
 	nmea->lock = false;
 }

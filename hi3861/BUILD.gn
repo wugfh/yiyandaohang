@@ -16,7 +16,8 @@ static_library("dtof") {
       "stm32.c",        
       "httpd_test.c",
       "wifi_connecter.c",
-      "dtof.c"
+      "dtof.c",
+      "webpage.c"
       ]
 
   defines = [

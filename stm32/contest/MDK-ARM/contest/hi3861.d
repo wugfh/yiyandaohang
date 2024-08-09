@@ -2,7 +2,6 @@ contest\hi3861.o: ..\Core\Src\hi3861.c
 contest\hi3861.o: D:\hardware\keil\ARM\ARMCC\Bin\..\include\stdio.h
 contest\hi3861.o: D:\hardware\keil\ARM\ARMCC\Bin\..\include\string.h
 contest\hi3861.o: D:\hardware\keil\ARM\ARMCC\Bin\..\include\stdlib.h
-contest\hi3861.o: ../Core/Inc/hi3861.h
 contest\hi3861.o: ../Core/Inc/main.h
 contest\hi3861.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h
 contest\hi3861.o: ../Core/Inc/stm32f4xx_hal_conf.h
@@ -45,6 +44,7 @@ contest\hi3861.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_pwr.h
 contest\hi3861.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_dma.h
 contest\hi3861.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usart.h
 contest\hi3861.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_gpio.h
+contest\hi3861.o: ../Core/Inc/hi3861.h
 contest\hi3861.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.h
 contest\hi3861.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h
 contest\hi3861.o: ../Core/Inc/FreeRTOSConfig.h
@@ -59,3 +59,7 @@ contest\hi3861.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h
 contest\hi3861.o: ../Core/Inc/audio.h
 contest\hi3861.o: D:\hardware\keil\ARM\ARMCC\Bin\..\include\stdbool.h
 contest\hi3861.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os.h
+contest\hi3861.o: ../Core/Inc/util.h
+contest\hi3861.o: ../Core/Inc/nmea.h
+contest\hi3861.o: ../Core/Inc/nmea_config.h
+contest\hi3861.o: ../Core/Inc/syn6288.h

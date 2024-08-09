@@ -57,3 +57,5 @@ contest\audio.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h
 contest\audio.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h
 contest\audio.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.h
 contest\audio.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
+contest\audio.o: ../Core/Inc/hi3861.h
+contest\audio.o: ../Core/Inc/syn6288.h

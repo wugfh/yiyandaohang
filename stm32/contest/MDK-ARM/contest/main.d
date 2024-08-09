@@ -59,7 +59,9 @@ contest\main.o: D:\hardware\keil\ARM\ARMCC\Bin\..\include\stdbool.h
 contest\main.o: D:\hardware\keil\ARM\ARMCC\Bin\..\include\string.h
 contest\main.o: D:\hardware\keil\ARM\ARMCC\Bin\..\include\stdio.h
 contest\main.o: D:\hardware\keil\ARM\ARMCC\Bin\..\include\stdlib.h
-contest\main.o: ../Core/Inc/log.h
-contest\main.o: ../Core/Inc/audio.h
 contest\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
+contest\main.o: ../Core/Inc/util.h
+contest\main.o: ../Core/Inc/audio.h
 contest\main.o: ../Core/Inc/hi3861.h
+contest\main.o: ../Core/Inc/syn6288.h
+contest\main.o: ../Core/Inc/qmc5883.h
